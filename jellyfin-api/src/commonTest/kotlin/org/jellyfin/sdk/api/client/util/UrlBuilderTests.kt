@@ -18,6 +18,17 @@ class UrlBuilderTests : FunSpec({
 		UrlBuilder.buildPath(path, parameters) shouldBe "test/1/2/three"
 	}
 
+	test("buildPath ignores path parameters") {
+		val path = "/test/{one}/{two}/three"
+		val parameters = mapOf(
+			"one" to "1",
+			"two" to "2",
+			"three" to "3"
+		)
+
+		UrlBuilder.buildPath(path, parameters, true) shouldBe "test/{one}/{two}/three"
+	}
+
 	test("buildPath replaces values not separated by a slash") {
 		val path = "/test/{twe}{lve}/three"
 		val parameters = mapOf(
@@ -87,6 +98,16 @@ class UrlBuilderTests : FunSpec({
 		)
 
 		path.buildPath(parameters) shouldBe "test/foo/baz"
+	}
+
+	test("buildUrl with empty path template uses baseUrl") {
+		val baseUrl = "https://demo.jellyfin.org/stable/"
+		UrlBuilder.buildUrl(baseUrl = baseUrl, pathTemplate = "") shouldBe baseUrl
+	}
+
+	test("buildUrl_with slash only path template uses baseUrl") {
+		val baseUrl = "https://demo.jellyfin.org/stable"
+		UrlBuilder.buildUrl(baseUrl = baseUrl, pathTemplate = "/") shouldBe "$baseUrl/"
 	}
 
 	test("buildUrl appends query parameters") {
@@ -221,4 +242,50 @@ class UrlBuilderTests : FunSpec({
 			ignorePathParameters = true,
 		) shouldBe "${baseUrl}%7Bfoo%7D/%7Bfoo/%7Bbar"
 	}
+
+	test("buildUrl ignores path parameters when ignorePathParameters is set but has parameters") {
+		val baseUrl = "https://demo.jellyfin.org/stable/"
+
+		UrlBuilder.buildUrl(
+			baseUrl = baseUrl,
+			pathTemplate = "/{foo}/{foo/{bar",
+			pathParameters = mapOf("foo" to "test", "bar" to "test2"),
+			ignorePathParameters = true,
+		) shouldBe "${baseUrl}%7Bfoo%7D/%7Bfoo/%7Bbar"
+	}
+
+	test("buildUrl real world imageUrl") {
+		val baseUrl = "https://demo.jellyfin.org/stable/"
+		val pathTemplate = "/Items/{itemId}/Images/{imageType}"
+		val pathParameters = mapOf(
+			"itemId" to "12345678-1234-1234-1234-123456789012",
+			"imageType" to "Primary"
+		)
+		val queryParameters = mapOf(
+			"maxWidth" to 150,
+			"maxHeight" to 150,
+			"width" to 100,
+			"height" to 100,
+			"quality" to 80,
+			"fillWidth" to 100,
+			"fillHeight" to 100,
+			"tag" to "07256accffef0e7158e77c4f5497a811",
+			"format" to "jpg",
+			"percentPlayed" to 0.5,
+			"unplayedCount" to 1,
+			"blur" to 1,
+			"backgroundColor" to "#000000",
+			"foregroundLayer" to "#000000",
+			"imageIndex" to 10,
+		)
+
+		val result = UrlBuilder.buildUrl(
+			baseUrl = baseUrl,
+			pathTemplate = pathTemplate,
+			pathParameters = pathParameters,
+			queryParameters = queryParameters
+		)
+		result shouldBe "https://demo.jellyfin.org/stable/Items/12345678-1234-1234-1234-123456789012/Images/Primary?maxWidth=150&maxHeight=150&width=100&height=100&quality=80&fillWidth=100&fillHeight=100&tag=07256accffef0e7158e77c4f5497a811&format=jpg&percentPlayed=0.5&unplayedCount=1&blur=1&backgroundColor=%23000000&foregroundLayer=%23000000&imageIndex=10"
+	}
+
 })
