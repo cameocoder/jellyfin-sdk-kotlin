@@ -21,8 +21,13 @@ internal fun Char.isUnreserved() =
 		this in arrayOf('-', '_', '.', '~')
 
 internal fun String.extractQuerystring(): Pair<String, String?> {
-	val path = substringBefore('?')
-	val querystring = if (path.length < length) substring(path.length + 1) else null
+	val delimiterIndex = this.indexOf('?')
 
-	return path to querystring
+	if (delimiterIndex == -1) {
+		return this to null
+	} else {
+		val path = this.substring(0, delimiterIndex)
+		val queryString = this.substring(delimiterIndex + 1)
+		return path to queryString
+	}
 }
