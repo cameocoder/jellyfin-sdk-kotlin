@@ -12,6 +12,8 @@ public object UrlBuilder {
 	private const val TOKEN_BRACKET_OPEN: Char = '{'
 	private const val TOKEN_BRACKET_CLOSE: Char = '}'
 
+	private val ISO_OFFSET_DATE_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+
 	/**
 	 * Create a complete url based on the [baseUrl] and given parameters.
 	 * Uses [buildPath] to create the path from the [pathTemplate] and [pathParameters].
@@ -38,28 +40,33 @@ public object UrlBuilder {
 
 			// Append query parameters
 			queryParameters
-				.filterNot { it.value == null }
 				.map { (key, rawValue) ->
-					// Determine values
-					val values = when (rawValue) {
-						is Collection<*> -> rawValue
-						else -> listOfNotNull(rawValue)
-					}
+					if (rawValue == null) return@map
 
-					// Add values
-					for (value in values) {
-						val stringValue = when (value) {
-							is DateTime -> value
-								.atZone(ZoneId.systemDefault())
-								.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-
-							else -> value.toString()
+					when (rawValue) {
+						is Collection<*> -> {
+							for (value in rawValue) {
+								val stringValue = formatValueForQuery(value)
+								addQueryParameter(key, stringValue)
+							}
 						}
 
-						addQueryParameter(key, stringValue)
+						else -> {
+							val stringValue = formatValueForQuery(rawValue)
+							addQueryParameter(key, stringValue)
+						}
 					}
 				}
 		}.build().toString()
+	}
+
+	private fun formatValueForQuery(value: Any?): String {
+		return when (value) {
+			is DateTime -> value
+				.atZone(ZoneId.systemDefault())
+				.format(ISO_OFFSET_DATE_TIME_FORMATTER)
+			else -> value.toString()
+		}
 	}
 
 	public fun buildPath(
